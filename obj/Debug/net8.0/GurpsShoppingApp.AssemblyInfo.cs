@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GurpsShoppingApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+68ecc1b036aa001bcc48d5db124e8ff2549cec2f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+96887ac2635b5f17968553382da4a076ffc51bc6")]
 [assembly: System.Reflection.AssemblyProductAttribute("GurpsShoppingApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GurpsShoppingApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
