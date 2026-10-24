@@ -1,11 +1,12 @@
-using Azure.Core;
-using Azure.Identity;
 using Microsoft.Data.SqlClient;
 
 namespace GurpsShoppingApp.Services;
 
 public sealed class AzureSqlConnectionSettings
 {
+    private const string DefaultServer = "rec-ttg-stjm.database.windows.net";
+    private const string DefaultDatabase = "gurps-shopping-app";
+
     public string? ConnectionString { get; init; }
 
     public string? Server { get; init; }
@@ -20,14 +21,19 @@ public sealed class AzureSqlConnectionSettings
 
     public static AzureSqlConnectionSettings FromEnvironment()
     {
+        var managedIdentitySetting = Environment.GetEnvironmentVariable("AZURE_SQL_USE_MANAGED_IDENTITY");
+        var userId = Environment.GetEnvironmentVariable("AZURE_SQL_USER");
+        var password = Environment.GetEnvironmentVariable("AZURE_SQL_PASSWORD");
         return new AzureSqlConnectionSettings
         {
             ConnectionString = Environment.GetEnvironmentVariable("AZURE_SQL_CONNECTIONSTRING"),
-            Server = Environment.GetEnvironmentVariable("AZURE_SQL_SERVER"),
-            Database = Environment.GetEnvironmentVariable("AZURE_SQL_DATABASE"),
-            UserId = Environment.GetEnvironmentVariable("AZURE_SQL_USER"),
-            Password = Environment.GetEnvironmentVariable("AZURE_SQL_PASSWORD"),
-            UseManagedIdentity = string.Equals(Environment.GetEnvironmentVariable("AZURE_SQL_USE_MANAGED_IDENTITY"), "true", StringComparison.OrdinalIgnoreCase)
+            Server = Environment.GetEnvironmentVariable("AZURE_SQL_SERVER") ?? DefaultServer,
+            Database = Environment.GetEnvironmentVariable("AZURE_SQL_DATABASE") ?? DefaultDatabase,
+            UserId = userId,
+            Password = password,
+            UseManagedIdentity = managedIdentitySetting is null
+                ? string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(password)
+                : string.Equals(managedIdentitySetting, "true", StringComparison.OrdinalIgnoreCase)
         };
     }
 
@@ -35,7 +41,21 @@ public sealed class AzureSqlConnectionSettings
     {
         if (!string.IsNullOrWhiteSpace(ConnectionString))
         {
-            return ConnectionString;
+            var configuredBuilder = new SqlConnectionStringBuilder(ConnectionString)
+            {
+                Encrypt = true,
+                TrustServerCertificate = false,
+                ConnectTimeout = 30,
+                ConnectRetryCount = 5,
+                ConnectRetryInterval = 10
+            };
+
+            if (UseManagedIdentity && string.IsNullOrWhiteSpace(configuredBuilder.UserID))
+            {
+                configuredBuilder.Authentication = SqlAuthenticationMethod.ActiveDirectoryDefault;
+            }
+
+            return configuredBuilder.ConnectionString;
         }
 
         if (string.IsNullOrWhiteSpace(Server) || string.IsNullOrWhiteSpace(Database))
@@ -48,7 +68,11 @@ public sealed class AzureSqlConnectionSettings
             DataSource = Server,
             InitialCatalog = Database,
             Encrypt = true,
-            ConnectTimeout = 30
+            TrustServerCertificate = false,
+            ConnectTimeout = 30,
+            ConnectRetryCount = 5,
+            ConnectRetryInterval = 10,
+            ApplicationName = "GurpsShoppingApp"
         };
 
         if (UseManagedIdentity)
@@ -62,23 +86,12 @@ public sealed class AzureSqlConnectionSettings
             builder.Authentication = SqlAuthenticationMethod.SqlPassword;
         }
 
-        var connectionString = builder.ConnectionString;
-        return connectionString.Contains("TrustServerCertificate=", StringComparison.OrdinalIgnoreCase)
-            ? connectionString
-            : $"{connectionString};TrustServerCertificate=False";
+        return builder.ConnectionString;
     }
 
     public async Task<SqlConnection> CreateOpenConnectionAsync(CancellationToken cancellationToken = default)
     {
         var connection = new SqlConnection(BuildConnectionString());
-
-        if (UseManagedIdentity)
-        {
-            var credential = new DefaultAzureCredential();
-            var token = await credential.GetTokenAsync(new TokenRequestContext(new[] { "https://database.windows.net/.default" }), cancellationToken);
-            connection.AccessToken = token.Token;
-        }
-
         await connection.OpenAsync(cancellationToken);
         return connection;
     }

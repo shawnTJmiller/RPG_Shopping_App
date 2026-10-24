@@ -142,3 +142,4 @@ C:\Code\GurpsShoppingApp\GurpsShoppingApp.Tests\obj\Debug\net8.0\refint\GurpsSho
 C:\Code\GurpsShoppingApp\GurpsShoppingApp.Tests\obj\Debug\net8.0\GurpsShoppingApp.Tests.pdb
 C:\Code\GurpsShoppingApp\GurpsShoppingApp.Tests\obj\Debug\net8.0\GurpsShoppingApp.Tests.genruntimeconfig.cache
 C:\Code\GurpsShoppingApp\GurpsShoppingApp.Tests\obj\Debug\net8.0\ref\GurpsShoppingApp.Tests.dll
+C:\Code\GurpsShoppingApp\GurpsShoppingApp.Tests\obj\Debug\net8.0\GurpsShoppingApp.Tests.sourcelink.json
