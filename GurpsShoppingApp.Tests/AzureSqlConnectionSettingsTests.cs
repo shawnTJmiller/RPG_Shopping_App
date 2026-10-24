@@ -1,4 +1,5 @@
 using GurpsShoppingApp.Services;
+using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace GurpsShoppingApp.Tests;
@@ -16,10 +17,27 @@ public sealed class AzureSqlConnectionSettingsTests
             Password = "secret"
         };
 
-        var connectionString = settings.BuildConnectionString();
+        var builder = new SqlConnectionStringBuilder(settings.BuildConnectionString());
 
-        Assert.Contains("Encrypt=True", connectionString, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("TrustServerCertificate=False", connectionString, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Initial Catalog=shopping", connectionString, StringComparison.OrdinalIgnoreCase);
+        Assert.True(builder.Encrypt);
+        Assert.False(builder.TrustServerCertificate);
+        Assert.Equal("shopping", builder.InitialCatalog);
+    }
+
+    [Fact]
+    public void BuildConnectionString_HardensProvidedConnectionString()
+    {
+        var settings = new AzureSqlConnectionSettings
+        {
+            ConnectionString = "Server=tcp:example.database.windows.net;Database=shopping;TrustServerCertificate=True",
+            UseManagedIdentity = true
+        };
+
+        var builder = new SqlConnectionStringBuilder(settings.BuildConnectionString());
+
+        Assert.True(builder.Encrypt);
+        Assert.False(builder.TrustServerCertificate);
+        Assert.Equal(SqlAuthenticationMethod.ActiveDirectoryDefault, builder.Authentication);
+        Assert.Equal(5, builder.ConnectRetryCount);
     }
 }
